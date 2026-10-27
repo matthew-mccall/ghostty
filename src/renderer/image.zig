@@ -712,6 +712,42 @@ pub const Image = union(enum) {
         }
     }
 
+    /// Convert device-owned image resources back to pending uploads. The
+    /// caller must drain in-flight frames before releasing their textures.
+    pub fn prepareDeviceChange(self: *Image, alloc: Allocator) !void {
+        switch (self.*) {
+            .ready => |texture| {
+                assert(texture.bpp == 4);
+                const data = try texture.read(alloc);
+                texture.deinit();
+                self.* = .{ .pending = .{
+                    .width = @intCast(texture.width),
+                    .height = @intCast(texture.height),
+                    .pixel_format = .rgba,
+                    .data = data.ptr,
+                } };
+            },
+            .replace => |r| {
+                r.texture.deinit();
+                self.* = .{ .pending = r.pending };
+            },
+            .unload_ready => |texture| {
+                texture.deinit();
+                self.* = .{ .unload_pending = .{
+                    .width = 0,
+                    .height = 0,
+                    .pixel_format = .rgba,
+                    .data = &.{},
+                } };
+            },
+            .unload_replace => |r| {
+                r.texture.deinit();
+                self.* = .{ .unload_pending = r.pending };
+            },
+            .pending, .unload_pending => {},
+        }
+    }
+
     /// Mark this image for unload whatever state it is in.
     pub fn markForUnload(self: *Image) void {
         self.* = switch (self.*) {

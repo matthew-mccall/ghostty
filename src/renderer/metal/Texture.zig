@@ -86,6 +86,22 @@ pub fn deinit(self: Self) void {
     self.texture.release();
 }
 
+/// Image textures are written only by the CPU, so their CPU copy remains
+/// current even in managed storage. Keep those pixels when changing GPUs.
+pub fn read(self: Self, alloc: Allocator) Allocator.Error![]u8 {
+    const data = try alloc.alloc(u8, self.width * self.height * self.bpp);
+    self.texture.msgSend(void, objc.sel("getBytes:bytesPerRow:fromRegion:mipmapLevel:"), .{
+        data.ptr,
+        @as(c_ulong, self.width * self.bpp),
+        mtl.MTLRegion{
+            .origin = .{ .x = 0, .y = 0, .z = 0 },
+            .size = .{ .width = self.width, .height = self.height, .depth = 1 },
+        },
+        @as(c_ulong, 0),
+    });
+    return data;
+}
+
 /// Replace a region of the texture with the provided data.
 ///
 /// Does NOT check the dimensions of the data to ensure correctness.

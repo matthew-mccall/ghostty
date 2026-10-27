@@ -1730,6 +1730,30 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
             if (sync_display_link) self.syncDisplayLink(null, null);
         }
 
+        /// Apply GPU preference changes even while the window is occluded.
+        pub fn updateDevice(self: *Self) !void {
+            self.draw_mutex.lockUncancelable(global.io());
+            defer self.draw_mutex.unlock(global.io());
+            try self.updateDeviceLocked();
+        }
+
+        fn updateDeviceLocked(self: *Self) !void {
+            // Metal power notifications wake even idle renderers. Each surface
+            // drains its own old GPU before replacing any device-bound state.
+            if (comptime @hasDecl(GraphicsAPI, "prepareDeviceChange")) {
+                if (try self.api.prepareDeviceChange()) |change| {
+                    errdefer change.deinit();
+                    self.releaseGpuResources();
+                    var images = self.images.images.valueIterator();
+                    while (images.next()) |image| try image.image.prepareDeviceChange(self.alloc);
+                    if (self.bg_image) |*image| try image.prepareDeviceChange(self.alloc);
+                    self.shaders.deinit(self.alloc);
+                    self.reinitialize_shaders = true;
+                    self.api.changeDevice(change);
+                }
+            }
+        }
+
         /// The body of `drawFrame`. Must be called with `draw_mutex` held.
         ///
         /// Returns true if the display link should be resynced once the
@@ -1755,6 +1779,8 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
             // that it needs to do before / after `drawFrame`.
             self.api.drawFrameStart();
             defer self.api.drawFrameEnd();
+
+            try self.updateDeviceLocked();
 
             // Retrieve the most up-to-date surface size from the Graphics API
             const surface_size = try self.api.surfaceSize();

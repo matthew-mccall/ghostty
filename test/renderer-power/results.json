@@ -1,0 +1,208 @@
+{
+  "date": "2026-10-26",
+  "power": "AC Power",
+  "dimensions": [
+    5120,
+    2880
+  ],
+  "base_commit": "f63508e5a1e0b3a5ce2f6cff591339e5b871aea0",
+  "kind": "offscreen full renderer; excludes WindowServer composition and physical display refresh",
+  "warmup_seconds": 3,
+  "warmup_draws": 20,
+  "measured_draws_per_run": 300,
+  "runs_per_variant": 3,
+  "library_sha256": {
+    "before": "7effcfa25e8c08c02844785a893e3a6a3fbe571719ac1fa1fd510a1763528dfc",
+    "after": "8aba552be5e0c0752b011a1bb2a920b06c3f94a4c9c01a5330b0aa0578cd71bf"
+  },
+  "summary": {
+    "before": {
+      "gpu": "Intel(R) UHD Graphics 630",
+      "fps": 37.669292150966555,
+      "median_ms": 26.63356499397196,
+      "p95_ms": 27.35147399653215
+    },
+    "after_fast": {
+      "gpu": "AMD Radeon Pro 5500M",
+      "fps": 185.14522627268445,
+      "median_ms": 5.230669004959054,
+      "p95_ms": 6.655940000200644
+    },
+    "after_high": {
+      "gpu": "AMD Radeon Pro 5500M",
+      "fps": 160.8340632346818,
+      "median_ms": 6.177888004458509,
+      "p95_ms": 8.327231000293978
+    }
+  },
+  "runs": {
+    "before": [
+      {
+        "gpu": "Intel(R) UHD Graphics 630",
+        "seconds": 7.963163805994554,
+        "gpu_p95_ms": 26.620583004842047,
+        "width": 5120,
+        "frame_median_ms": 26.56300799571909,
+        "frame_p95_ms": 27.35147399653215,
+        "renderer_fps": 37.67346839884976,
+        "gpu_buffers": 300,
+        "height": 2880,
+        "frames": 300,
+        "gpu_median_ms": 25.821416995313484,
+        "gpu_errors": 0
+      },
+      {
+        "gpu": "Intel(R) UHD Graphics 630",
+        "seconds": 8.011840249004308,
+        "gpu_p95_ms": 26.002917002188042,
+        "width": 5120,
+        "frame_median_ms": 26.63356499397196,
+        "frame_p95_ms": 26.986418990418315,
+        "renderer_fps": 37.44458085485208,
+        "gpu_buffers": 302,
+        "height": 2880,
+        "frames": 300,
+        "gpu_median_ms": 25.817499998083804,
+        "gpu_errors": 0
+      },
+      {
+        "gpu": "Intel(R) UHD Graphics 630",
+        "seconds": 7.964046650988166,
+        "gpu_p95_ms": 25.96349999657832,
+        "width": 5120,
+        "frame_median_ms": 26.635362999513745,
+        "frame_p95_ms": 26.99550199031364,
+        "renderer_fps": 37.669292150966555,
+        "gpu_buffers": 300,
+        "height": 2880,
+        "frames": 300,
+        "gpu_median_ms": 25.798082999244798,
+        "gpu_errors": 0
+      }
+    ],
+    "after_fast": [
+      {
+        "gpu": "AMD Radeon Pro 5500M",
+        "seconds": 1.6284416440030327,
+        "gpu_p95_ms": 4.351719995611347,
+        "width": 5120,
+        "frame_median_ms": 5.379763999371789,
+        "frame_p95_ms": 5.821679995278828,
+        "renderer_fps": 184.2252076424062,
+        "gpu_buffers": 304,
+        "height": 2880,
+        "frames": 300,
+        "gpu_median_ms": 4.117759992368519,
+        "gpu_errors": 0
+      },
+      {
+        "gpu": "AMD Radeon Pro 5500M",
+        "seconds": 1.5962107759987703,
+        "gpu_p95_ms": 4.37219999730587,
+        "width": 5120,
+        "frame_median_ms": 5.230669004959054,
+        "frame_p95_ms": 6.223490010597743,
+        "renderer_fps": 187.9451038114224,
+        "gpu_buffers": 300,
+        "height": 2880,
+        "frames": 300,
+        "gpu_median_ms": 4.214679996948689,
+        "gpu_errors": 0
+      },
+      {
+        "gpu": "AMD Radeon Pro 5500M",
+        "seconds": 1.62034963601036,
+        "gpu_p95_ms": 4.383280000183731,
+        "width": 5120,
+        "frame_median_ms": 5.226909008342773,
+        "frame_p95_ms": 6.655940000200644,
+        "renderer_fps": 185.14522627268445,
+        "gpu_buffers": 302,
+        "height": 2880,
+        "frames": 300,
+        "gpu_median_ms": 4.193720000330359,
+        "gpu_errors": 0
+      }
+    ],
+    "after_high": [
+      {
+        "gpu": "AMD Radeon Pro 5500M",
+        "seconds": 1.865276509008254,
+        "gpu_p95_ms": 5.063639997388236,
+        "width": 5120,
+        "frame_median_ms": 6.216775989742018,
+        "frame_p95_ms": 6.497951995697804,
+        "renderer_fps": 160.8340632346818,
+        "gpu_buffers": 302,
+        "height": 2880,
+        "frames": 300,
+        "gpu_median_ms": 4.782279997016303,
+        "gpu_errors": 0
+      },
+      {
+        "gpu": "AMD Radeon Pro 5500M",
+        "seconds": 1.8385960169980535,
+        "gpu_p95_ms": 5.133479993673973,
+        "width": 5120,
+        "frame_median_ms": 5.889697000384331,
+        "frame_p95_ms": 7.020556004135869,
+        "renderer_fps": 163.16798101728816,
+        "gpu_buffers": 304,
+        "height": 2880,
+        "frames": 300,
+        "gpu_median_ms": 4.985640000086278,
+        "gpu_errors": 0
+      },
+      {
+        "gpu": "AMD Radeon Pro 5500M",
+        "seconds": 1.9218461050040787,
+        "gpu_p95_ms": 5.120720001286827,
+        "width": 5120,
+        "frame_median_ms": 6.177888004458509,
+        "frame_p95_ms": 8.327231000293978,
+        "renderer_fps": 156.0999079056662,
+        "gpu_buffers": 300,
+        "height": 2880,
+        "frames": 300,
+        "gpu_median_ms": 4.8739600024418905,
+        "gpu_errors": 0
+      }
+    ]
+  },
+  "power_transitions": [
+    {
+      "selected_correctly": true,
+      "occluded_gpu": "Intel(R) UHD Graphics 630",
+      "pixels_preserved": true,
+      "visible_gpu": "Intel(R) UHD Graphics 630",
+      "on_battery": 1,
+      "both_migrated_before_draw": true
+    },
+    {
+      "selected_correctly": true,
+      "occluded_gpu": "AMD Radeon Pro 5500M",
+      "pixels_preserved": true,
+      "visible_gpu": "AMD Radeon Pro 5500M",
+      "on_battery": 0,
+      "both_migrated_before_draw": true
+    }
+  ],
+  "background_image_transitions": [
+    {
+      "selected_correctly": true,
+      "occluded_gpu": "Intel(R) UHD Graphics 630",
+      "pixels_preserved": true,
+      "visible_gpu": "Intel(R) UHD Graphics 630",
+      "on_battery": 1,
+      "both_migrated_before_draw": true
+    },
+    {
+      "selected_correctly": true,
+      "occluded_gpu": "AMD Radeon Pro 5500M",
+      "pixels_preserved": true,
+      "visible_gpu": "AMD Radeon Pro 5500M",
+      "on_battery": 0,
+      "both_migrated_before_draw": true
+    }
+  ]
+}

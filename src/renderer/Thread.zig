@@ -553,6 +553,13 @@ fn renderCallback(
         return .disarm;
     };
 
+    // Power changes must also migrate occluded windows, otherwise they can
+    // keep the discrete GPU awake until they become visible again.
+    if (comptime @hasDecl(rendererpkg.Renderer, "updateDevice")) {
+        t.renderer.updateDevice() catch |err|
+            log.warn("error updating render device err={}", .{err});
+    }
+
     // If the display is now unrealized, release GPU resources now
     // we're on the render thread, and do not try to update and draw
     // this frame.

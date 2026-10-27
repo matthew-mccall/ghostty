@@ -18,6 +18,7 @@ const frameworks = [_]Framework{
     .{ .tag = .all, .name = "CoreVideo", .headers = &.{ "CoreVideo.h", "CVPixelBuffer.h" } },
     .{ .tag = .all, .name = "QuartzCore", .headers = &.{"CALayer.h"} },
     .{ .tag = .all, .name = "IOSurface", .headers = &.{"IOSurfaceRef.h"} },
+    .{ .tag = .macos, .name = "IOKit", .headers = &.{"ps/IOPowerSources.h"} },
     .{ .tag = .macos, .name = "Carbon", .headers = &.{"Carbon.h"} },
 };
 
