@@ -6,11 +6,62 @@ import GhosttyKit
 
 /// A classic, tabbed terminal experience.
 class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Controller {
+    private var tabDragAccessory: NSTitlebarAccessoryViewController?
+    let verticalTabsEnabled: Bool
+    var verticalTabs: VerticalTabContainerController?
+    private lazy var nativeTabContainer = NativeTerminalTabContainer(self)
+    var tabContainer: any TerminalTabContainer { verticalTabs ?? nativeTabContainer }
+    var allTerminalSurfaces: [Ghostty.SurfaceView] { verticalTabs?.controllers.flatMap { Array($0.surfaceTree) } ?? Array(surfaceTree) }
+    override var ownsSurfaceTree: Bool { !verticalTabsEnabled }
+
+    override var titleOverride: String? {
+        get {
+            if let selected = verticalTabs?.selectedController { return selected.titleOverride }
+            return super.titleOverride
+        }
+        set {
+            if let selected = verticalTabs?.selectedController { selected.titleOverride = newValue } else { super.titleOverride = newValue }
+        }
+    }
+
+    func updateTabDragHandle(enabled: Bool) {
+        guard verticalTabs == nil, let window, window.styleMask.contains(.titled) else { return }
+        if enabled && tabDragAccessory == nil {
+            let accessory = NSTitlebarAccessoryViewController()
+            let handle = TerminalTabDragHandle(frame: NSRect(x: 0, y: 0, width: 26, height: 26))
+            handle.toolTip = "Drag Tab to a Sidebar"
+            handle.setAccessibilityLabel("Drag tab to another window's sidebar")
+            handle.setAccessibilityRole(.image)
+            accessory.view = handle
+            accessory.layoutAttribute = .right
+            tabDragAccessory = accessory
+            window.addTitlebarAccessoryViewController(accessory)
+        } else if !enabled, let accessory = tabDragAccessory,
+                  let index = window.titlebarAccessoryViewControllers.firstIndex(of: accessory) {
+            window.removeTitlebarAccessoryViewController(at: index)
+            tabDragAccessory = nil
+        }
+    }
+
+    override func windowCanBeClosedWithoutConfirmation() -> Bool {
+        guard let verticalTabs else { return super.windowCanBeClosedWithoutConfirmation() }
+        return verticalTabs.controllers.allSatisfy { $0.windowCanBeClosedWithoutConfirmation() }
+    }
+
+    override func syncSurfaceTreeOcclusionState() {
+        if let verticalTabs { verticalTabs.controllers.forEach { $0.syncSurfaceTreeOcclusionState() } } else { super.syncSurfaceTreeOcclusionState() }
+    }
+
+    override func syncFocusToSurfaceTree() {
+        if let verticalTabs { verticalTabs.controllers.forEach { $0.syncFocusToSurfaceTree() } } else { super.syncFocusToSurfaceTree() }
+    }
+
     override var windowNibName: NSNib.Name? {
         let defaultValue = "Terminal"
 
         guard let appDelegate = NSApp.delegate as? AppDelegate else { return defaultValue }
         let config = appDelegate.ghostty.config
+        if verticalTabsEnabled { return defaultValue }
 
         // If we have no window decorations, there's no reason to do anything but
         // the default titlebar (because there will be no titlebar).
@@ -53,7 +104,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
 
     /// This is set to false by init if the window managed by this controller should not be restorable.
     /// For example, terminals executing custom scripts are not restorable.
-    private var restorable: Bool = true
+    private(set) var restorable: Bool = true
 
     /// The configuration derived from the Ghostty config so we don't need to rely on references.
     private(set) var derivedConfig: DerivedConfig
@@ -64,14 +115,21 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     init(_ ghostty: Ghostty.App,
          withBaseConfig base: Ghostty.SurfaceConfiguration? = nil,
          withSurfaceTree tree: SplitTree<Ghostty.SurfaceView>? = nil,
-         parent: NSWindow? = nil
+         parent: NSWindow? = nil,
+         verticalTabs: Bool? = nil,
+         restorable: Bool? = nil
     ) {
+        if #available(macOS 26.0, *) {
+            self.verticalTabsEnabled = verticalTabs ?? ghostty.config.macosVerticalTabs
+        } else {
+            self.verticalTabsEnabled = false
+        }
         // The window we manage is not restorable if we've specified a command
         // to execute. We do this because the restored window is meaningless at the
         // time of writing this: it'd just restore to a shell in the same directory
         // as the script. We may want to revisit this behavior when we have scrollback
         // restoration.
-        self.restorable = (base?.command ?? "") == ""
+        self.restorable = restorable ?? ((base?.command ?? "") == "")
 
         // Setup our initial derived config based on the current app config
         self.derivedConfig = DerivedConfig(ghostty.config)
@@ -170,6 +228,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
 
     override func surfaceTreeDidChange(from: SplitTree<Ghostty.SurfaceView>, to: SplitTree<Ghostty.SurfaceView>) {
         super.surfaceTreeDidChange(from: from, to: to)
+        if verticalTabsEnabled { invalidateRestorableState(); return }
 
         // Whenever our surface tree changes in any way (new split, close split, etc.)
         // we want to invalidate our state.
@@ -420,7 +479,10 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
         _ ghostty: Ghostty.App,
         from parent: NSWindow? = nil,
         withBaseConfig baseConfig: Ghostty.SurfaceConfiguration? = nil
-    ) -> TerminalController? {
+    ) -> BaseTerminalController? {
+        if let owner = parent?.windowController as? TerminalController, let tabs = owner.verticalTabs {
+            return tabs.newTab(baseConfig: baseConfig, child: false)
+        }
         // Making sure that we're dealing with a TerminalController. If not,
         // then we just create a new window.
         guard let parent,
@@ -442,7 +504,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
         }
 
         // Create a new window and add it to the parent
-        let controller = TerminalController.init(ghostty, withBaseConfig: baseConfig)
+        let controller = TerminalController.init(ghostty, withBaseConfig: baseConfig, verticalTabs: false)
         controller.isBackgroundOpaque = parentController.isBackgroundOpaque
         guard let window = controller.window else { return controller }
 
@@ -580,10 +642,10 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     /// Updates the loaded window's restoration policy from the app configuration.
-    private func syncRestoration(_ config: Ghostty.Config) {
+    func syncRestoration(_ config: Ghostty.Config) {
         guard isWindowLoaded, let window else { return }
         // Setting all three of these is required for restoration to work.
-        window.isRestorable = restorable && config.windowSaveState != "never"
+        window.isRestorable = (verticalTabs?.tree.preorder.contains { $0.value.isRestorable } ?? restorable) && config.windowSaveState != "never"
         window.restorationClass = TerminalWindowRestoration.self
         window.identifier = .init(String(describing: TerminalWindowRestoration.self))
     }
@@ -593,6 +655,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     /// changes, when a window is closed, and when tabs are reordered
     /// with the mouse.
     func relabelTabs() {
+        if verticalTabsEnabled { return }
         // We only listen for frame changes if we have more than 1 window,
         // otherwise the accessory view doesn't matter.
         tabListenForFrame = window?.tabbedWindows?.count ?? 0 > 1
@@ -616,6 +679,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     private func fixTabBar() {
+        if verticalTabsEnabled { return }
         // We do this to make sure that the tab bar will always re-composite. If we don't,
         // then the it will "drag" pieces of the background with it when a transparent
         // window is moved around.
@@ -721,6 +785,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     func closeTabImmediately(registerRedo: Bool = true) {
+        if let tabs = verticalTabs, let id = tabs.tree.selectedID { tabs.close(id, subtree: false, confirm: false); return }
         guard let window = window else { return }
         guard let tabGroup = window.tabGroup,
                 tabGroup.windows.count > 1 else {
@@ -846,6 +911,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     /// Closes the current window (including any other tabs) immediately and without
     /// confirmation. This will setup proper undo state so the action can be undone.
     func closeWindowImmediately() {
+        if let verticalTabs { verticalTabs.closeWindow(confirm: false); return }
         guard let window = window else { return }
 
         cancelPendingInitialPresentation()
@@ -985,8 +1051,8 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
         // needs quit confirmation. This lets us attach the confirmation to something
         // that is running.
         guard let confirmWindow = all
-            .first(where: { $0.surfaceTree.contains(where: { $0.needsConfirmQuit }) })?
-            .surfaceTree.first(where: { $0.needsConfirmQuit })?
+            .first(where: { $0.allTerminalSurfaces.contains(where: { $0.needsConfirmQuit }) })?
+            .allTerminalSurfaces.first(where: { $0.needsConfirmQuit })?
             .window
         else {
             closeAllWindowsImmediately()
@@ -1030,7 +1096,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     convenience init(_ ghostty: Ghostty.App, with undoState: UndoState) {
-        self.init(ghostty, withSurfaceTree: undoState.surfaceTree)
+        self.init(ghostty, withSurfaceTree: undoState.surfaceTree, verticalTabs: false)
 
         // Show the window and restore its frame
         showWindow(nil)
@@ -1112,18 +1178,24 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
             focusedSurface = view
         }
 
-        // Initialize our content view to the SwiftUI root
-        let container = TerminalViewContainer {
-            TerminalView(ghostty: ghostty, viewModel: self, delegate: self)
+        if verticalTabsEnabled {
+            let tabs = VerticalTabContainerController(owner: self, initialTree: surfaceTree, restorable: restorable)
+            verticalTabs = tabs
+            window.tabbingMode = .disallowed
+            window.contentViewController = tabs
+            window.titlebarAppearsTransparent = true
+            window.styleMask.insert(.fullSizeContentView)
+            window.titlebarSeparatorStyle = .none
+            tabs.installToolbar()
+            tabs.refreshSelection(focus: false)
+        } else {
+            let container = TerminalViewContainer {
+                TerminalView(ghostty: ghostty, viewModel: self, delegate: self)
+            }
+            container.initialContentSize = focusedSurface?.initialSize
+            window.contentView = container
         }
-
-        // Set the initial content size on the container so that
-        // intrinsicContentSize returns the correct value immediately,
-        // without waiting for @FocusedValue to propagate through the
-        // SwiftUI focus chain.
-        container.initialContentSize = focusedSurface?.initialSize
-
-        window.contentView = container
+        window.registerForDraggedTypes([VerticalTabContainerController.pasteboardType])
 
         // If we have a default size, we want to apply it.
         if let defaultSize {
@@ -1156,7 +1228,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
         // accessing `window.tabGroup` materializes the window's tab group
         // machinery, which takes ~15-20ms and is otherwise not needed during
         // window creation.
-        if NSWindow.userTabbingPreference == .always,
+        if !verticalTabsEnabled, NSWindow.userTabbingPreference == .always,
            !window.styleMask.contains(.fullScreen) {
             // If we have more than 1 window in our tab group we know we're a new window.
             // Since Ghostty manages tabbing manually this will never be more than one
@@ -1215,6 +1287,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     lazy private(set) var tabGroupCloseCoordinator = TabGroupCloseCoordinator()
 
     override func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if let verticalTabs { verticalTabs.closeWindow(confirm: true); return false }
         tabGroupCloseCoordinator.windowShouldClose(sender) { [weak self] scope in
             guard let self else { return }
             switch scope {
@@ -1230,6 +1303,11 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     override func windowWillClose(_ notification: Notification) {
+        if let tabs = verticalTabs {
+            tabs.shutdown()
+            window?.contentViewController = nil
+            verticalTabs = nil
+        }
         super.windowWillClose(notification)
         cancelPendingInitialPresentation()
         self.relabelTabs()
@@ -1265,9 +1343,15 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     override func windowDidBecomeKey(_ notification: Notification) {
+        Self.updateVerticalTabMenus(enabled: verticalTabsEnabled)
         super.windowDidBecomeKey(notification)
         self.relabelTabs()
         self.fixTabBar()
+    }
+
+    override func windowDidResignKey(_ notification: Notification) {
+        super.windowDidResignKey(notification)
+        Self.updateVerticalTabMenus(enabled: false)
     }
 
     override func windowDidMove(_ notification: Notification) {
@@ -1311,6 +1395,12 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
 
     // MARK: First Responder
 
+    @IBAction func newChildTab(_ sender: Any?) { _ = verticalTabs?.perform("new_child_tab") }
+    @IBAction func indentTab(_ sender: Any?) { _ = verticalTabs?.perform("indent_tab") }
+    @IBAction func outdentTab(_ sender: Any?) { _ = verticalTabs?.perform("outdent_tab") }
+    @IBAction func closeTabSubtree(_ sender: Any?) { _ = verticalTabs?.perform("close_tab_subtree") }
+    @IBAction func toggleTabSidebar(_ sender: Any?) { verticalTabs?.toggleSidebar(sender) }
+
     @IBAction func newWindow(_ sender: Any?) {
         guard let surface = focusedSurface?.surface else { return }
         ghostty.newWindow(surface: surface)
@@ -1322,6 +1412,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     @IBAction func closeTab(_ sender: Any?) {
+        if let tabs = verticalTabs, let id = tabs.tree.selectedID { tabs.close(id, subtree: false); return }
         guard let window = window else { return }
         guard window.tabGroup?.windows.count ?? 0 > 1 else {
             closeWindow(sender)
@@ -1342,6 +1433,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     @IBAction func closeOtherTabs(_ sender: Any?) {
+        if let tabs = verticalTabs { tabs.closeOthers(toRight: false); return }
         guard let window = window else { return }
         guard let tabGroup = window.tabGroup else { return }
 
@@ -1374,6 +1466,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     @IBAction func closeTabsOnTheRight(_ sender: Any?) {
+        if let tabs = verticalTabs { tabs.closeOthers(toRight: true); return }
         guard let window = window else { return }
         guard let tabGroup = window.tabGroup else { return }
         guard let currentIndex = tabGroup.windows.firstIndex(of: window) else { return }
@@ -1437,6 +1530,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     @IBAction override func closeWindow(_ sender: Any?) {
+        if let tabs = verticalTabs { tabs.closeWindow(confirm: true); return }
         guard let window = window else { return }
 
         // We need to check all the windows in our tab group for confirmation
@@ -1545,6 +1639,14 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     // MARK: - Notifications
 
     @objc private func onMoveTab(notification: SwiftUI.Notification) {
+        if let tabs = verticalTabs,
+           let target = notification.object as? Ghostty.SurfaceView,
+           let action = notification.userInfo?[Notification.Name.GhosttyMoveTabKey] as? Ghostty.Action.MoveTab,
+           let session = BaseTerminalController.controller(owning: target) as? TerminalTabSessionController,
+           session.host === self {
+            tabs.move(session.id, amount: action.amount)
+            return
+        }
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
         guard target == self.focusedSurface else { return }
         guard let window = self.window else { return }
@@ -1617,6 +1719,13 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     }
 
     @objc private func onGotoTab(notification: SwiftUI.Notification) {
+        if let tabs = verticalTabs,
+           let target = notification.object as? Ghostty.SurfaceView,
+           BaseTerminalController.controller(owning: target)?.terminalWindowController === self,
+           let direction = notification.userInfo?[Ghostty.Notification.GotoTabKey] as? ghostty_action_goto_tab_e {
+            tabs.gotoTab(direction)
+            return
+        }
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
         guard target == self.focusedSurface else { return }
         guard let window = self.window else { return }
@@ -1670,25 +1779,32 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
 
     @objc private func onCloseTab(notification: SwiftUI.Notification) {
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
-        guard surfaceTree.contains(target) else { return }
+        guard surfaceTree.contains(target) || BaseTerminalController.controller(owning: target)?.terminalWindowController === self else { return }
+        if let session = BaseTerminalController.controller(owning: target) as? TerminalTabSessionController, let tabs = verticalTabs {
+            tabs.close(session.id, subtree: false); return
+        }
         closeTab(self)
     }
 
     @objc private func onCloseOtherTabs(notification: SwiftUI.Notification) {
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
-        guard surfaceTree.contains(target) else { return }
-        closeOtherTabs(self)
+        guard surfaceTree.contains(target) || BaseTerminalController.controller(owning: target)?.terminalWindowController === self else { return }
+        if let session = BaseTerminalController.controller(owning: target) as? TerminalTabSessionController {
+            verticalTabs?.closeOthers(toRight: false, relativeTo: session.id)
+        } else { closeOtherTabs(self) }
     }
 
     @objc private func onCloseTabsOnTheRight(notification: SwiftUI.Notification) {
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
-        guard surfaceTree.contains(target) else { return }
-        closeTabsOnTheRight(self)
+        guard surfaceTree.contains(target) || BaseTerminalController.controller(owning: target)?.terminalWindowController === self else { return }
+        if let session = BaseTerminalController.controller(owning: target) as? TerminalTabSessionController {
+            verticalTabs?.closeOthers(toRight: true, relativeTo: session.id)
+        } else { closeTabsOnTheRight(self) }
     }
 
     @objc private func onCloseWindow(notification: SwiftUI.Notification) {
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
-        guard surfaceTree.contains(target) else { return }
+        guard surfaceTree.contains(target) || BaseTerminalController.controller(owning: target)?.terminalWindowController === self else { return }
         closeWindow(self)
     }
 
@@ -1747,6 +1863,18 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
 
 extension TerminalController {
     override func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if let tabs = verticalTabs {
+            switch item.action {
+            case #selector(newChildTab), #selector(closeTabSubtree), #selector(toggleTabSidebar): return true
+            case #selector(indentTab): return (tabs.tree.selectedID.flatMap { tabs.tree.position(of: $0)?.index } ?? 0) > 0
+            case #selector(outdentTab): return tabs.tree.selectedID.flatMap { tabs.tree.position(of: $0)?.parent } != nil
+            case #selector(closeOtherTabs): return tabs.controllers.count > 1
+            case #selector(closeTabsOnTheRight): return tabs.tree.preorder.last?.id != tabs.tree.selectedID
+            case #selector(NSWindow.toggleTabOverview(_:)): return false
+            default: break
+            }
+        }
+
         switch item.action {
         case #selector(closeTabsOnTheRight):
             guard let window, let tabGroup = window.tabGroup else { return false }

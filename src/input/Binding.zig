@@ -559,6 +559,17 @@ pub const Action = union(enum) {
     /// Open a new tab.
     new_tab,
 
+    /// Create a child of the current tab in the macOS vertical sidebar.
+    new_child_tab,
+    /// Nest the current tab and descendants under the previous sibling.
+    indent_tab,
+    /// Move the current tab and descendants one level toward the root.
+    outdent_tab,
+    /// Close the current tab and its complete descendant subtree.
+    close_tab_subtree,
+    /// Show or hide the native macOS vertical tab sidebar.
+    toggle_tab_sidebar,
+
     /// Go to the previous tab.
     previous_tab,
 
@@ -1444,6 +1455,11 @@ pub const Action = union(enum) {
             // come from. For example `new_window` needs to be sourced to
             // a surface so inheritance can be done correctly.
             .new_tab,
+            .new_child_tab,
+            .indent_tab,
+            .outdent_tab,
+            .close_tab_subtree,
+            .toggle_tab_sidebar,
             .previous_tab,
             .next_tab,
             .last_tab,
@@ -4921,4 +4937,13 @@ test "set: formatEntries leaf_chained with text action" {
         \\
     ;
     try testing.expectEqualStrings(expected, output.written());
+}
+
+test "parse: vertical tab actions" {
+    const testing = std.testing;
+    inline for (.{ "new_child_tab", "indent_tab", "outdent_tab", "close_tab_subtree", "toggle_tab_sidebar" }) |name| {
+        const binding = try parseSingle("ctrl+a=" ++ name);
+        try testing.expectEqualStrings(name, @tagName(binding.action));
+        try testing.expectError(Error.InvalidFormat, parseSingle("ctrl+a=" ++ name ++ ":unexpected"));
+    }
 }

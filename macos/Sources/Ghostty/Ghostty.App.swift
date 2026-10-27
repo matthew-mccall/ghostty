@@ -554,7 +554,7 @@ extension Ghostty {
             guard let uuidString = userInfo["surface"] as? String,
                   let uuid = UUID(uuidString: uuidString),
                   let surface = delegate?.findSurface(forUUID: uuid),
-                  let window = surface.window else { return false }
+                  let window = BaseTerminalController.controller(owning: surface)?.window else { return false }
 
             // If we don't require focus then we're good!
             let requireFocus = userInfo["requireFocus"] as? Bool ?? true
@@ -601,6 +601,23 @@ extension Ghostty {
 
             case GHOSTTY_ACTION_NEW_WINDOW:
                 newWindow(app, target: target)
+
+            case GHOSTTY_ACTION_NEW_CHILD_TAB, GHOSTTY_ACTION_INDENT_TAB, GHOSTTY_ACTION_OUTDENT_TAB,
+                 GHOSTTY_ACTION_CLOSE_TAB_SUBTREE, GHOSTTY_ACTION_TOGGLE_TAB_SIDEBAR:
+                guard target.tag == GHOSTTY_TARGET_SURFACE,
+                      let surface = target.target.surface,
+                      let view = surfaceView(from: surface),
+                      let session = BaseTerminalController.controller(owning: view) as? TerminalTabSessionController,
+                      let tabs = session.host?.verticalTabs else { return false }
+                let command: String
+                switch action.tag {
+                case GHOSTTY_ACTION_NEW_CHILD_TAB: command = "new_child_tab"
+                case GHOSTTY_ACTION_INDENT_TAB: command = "indent_tab"
+                case GHOSTTY_ACTION_OUTDENT_TAB: command = "outdent_tab"
+                case GHOSTTY_ACTION_CLOSE_TAB_SUBTREE: command = "close_tab_subtree"
+                default: command = "toggle_tab_sidebar"
+                }
+                return tabs.perform(command, on: session.id)
 
             case GHOSTTY_ACTION_NEW_TAB:
                 newTab(app, target: target)
@@ -970,7 +987,7 @@ extension Ghostty {
                 guard let surface = target.target.surface else { return }
                 guard let surfaceView = self.surfaceView(from: surface) else { return }
                 guard let appState = self.appState(fromView: surfaceView) else { return }
-                guard appState.config.windowDecorations else {
+                guard appState.config.windowDecorations || BaseTerminalController.controller(owning: surfaceView)?.terminalWindowController?.verticalTabsEnabled == true else {
                     let alert = NSAlert()
                     alert.messageText = "Tabs are disabled"
                     alert.informativeText = "Enable window decorations to use tabs"
@@ -1275,7 +1292,7 @@ extension Ghostty {
                     guard let surfaceView = self.surfaceView(from: surface) else { return false }
 
                     // See gotoTab for notes on this check.
-                    guard (surfaceView.window?.tabGroup?.windows.count ?? 0) > 1 else { return false }
+                    guard (BaseTerminalController.controller(owning: surfaceView)?.terminalWindowController?.tabContainer.controllers.count ?? 0) > 1 else { return false }
 
                     NotificationCenter.default.post(
                         name: .ghosttyMoveTab,
@@ -1306,9 +1323,11 @@ extension Ghostty {
 
                     // See gotoTab for notes on this check. A lone tab is already
                     // a window of its own, so there is nothing to move.
-                    guard (surfaceView.window?.tabGroup?.windows.count ?? 0) > 1 else { return false }
+                    guard (BaseTerminalController.controller(owning: surfaceView)?.terminalWindowController?.tabContainer.controllers.count ?? 0) > 1 else { return false }
 
-                    surfaceView.window?.moveTabToNewWindow(nil)
+                    if let session = BaseTerminalController.controller(owning: surfaceView) as? TerminalTabSessionController {
+                        session.host?.verticalTabs?.detach(session.id)
+                    } else { surfaceView.window?.moveTabToNewWindow(nil) }
 
                 default:
                     assertionFailure()
@@ -1332,7 +1351,7 @@ extension Ghostty {
 
                     // Similar to goto_split (see comment there) about our performability,
                     // we should make this more accurate later.
-                    guard (surfaceView.window?.tabGroup?.windows.count ?? 0) > 1 else { return false }
+                    guard (BaseTerminalController.controller(owning: surfaceView)?.terminalWindowController?.tabContainer.controllers.count ?? 0) > 1 else { return false }
 
                     NotificationCenter.default.post(
                         name: Notification.ghosttyGotoTab,
@@ -1361,7 +1380,7 @@ extension Ghostty {
                 case GHOSTTY_TARGET_SURFACE:
                     guard let surface = target.target.surface else { return false }
                     guard let surfaceView = self.surfaceView(from: surface) else { return false }
-                    guard let controller = surfaceView.window?.windowController as? BaseTerminalController else { return false }
+                    guard let controller = BaseTerminalController.controller(owning: surfaceView) else { return false }
 
                     // If the window has no splits, the action is not performable
                     guard controller.surfaceTree.isSplit else { return false }
@@ -1467,7 +1486,7 @@ extension Ghostty {
                 case GHOSTTY_TARGET_SURFACE:
                     guard let surface = target.target.surface else { return false }
                     guard let surfaceView = self.surfaceView(from: surface) else { return false }
-                    guard let controller = surfaceView.window?.windowController as? BaseTerminalController else { return false }
+                    guard let controller = BaseTerminalController.controller(owning: surfaceView) else { return false }
 
                     // If the window has no splits, the action is not performable
                     guard controller.surfaceTree.isSplit else { return false }
@@ -1521,7 +1540,7 @@ extension Ghostty {
             case GHOSTTY_TARGET_SURFACE:
                 guard let surface = target.target.surface else { return false }
                 guard let surfaceView = self.surfaceView(from: surface) else { return false }
-                guard let controller = surfaceView.window?.windowController as? BaseTerminalController else { return false }
+                guard let controller = BaseTerminalController.controller(owning: surfaceView) else { return false }
 
                 // If the window has no splits, the action is not performable
                 guard controller.surfaceTree.isSplit else { return false }
@@ -1569,7 +1588,7 @@ extension Ghostty {
             guard target.tag == GHOSTTY_TARGET_SURFACE,
                   let surface = target.target.surface,
                   let surfaceView = self.surfaceView(from: surface),
-                  let window = surfaceView.window,
+                  let window = BaseTerminalController.controller(owning: surfaceView)?.window,
                   let contents = v.contents
             else { return false }
 
@@ -1731,7 +1750,7 @@ extension Ghostty {
             case GHOSTTY_TARGET_SURFACE:
                 guard let surface = target.target.surface else { return }
                 guard let surfaceView = self.surfaceView(from: surface) else { return }
-                guard let window = surfaceView.window as? TerminalWindow else { return }
+                guard let window = BaseTerminalController.controller(owning: surfaceView)?.window as? TerminalWindow else { return }
 
                 switch mode {
                 case .on:
@@ -1765,7 +1784,7 @@ extension Ghostty {
             case GHOSTTY_TARGET_SURFACE:
                 guard let surface = target.target.surface,
                     let surfaceView = self.surfaceView(from: surface),
-                    let controller = surfaceView.window?.windowController as? BaseTerminalController else { return }
+                    let controller = BaseTerminalController.controller(owning: surfaceView) else { return }
 
                 controller.toggleBackgroundOpacity()
 
@@ -1851,9 +1870,7 @@ extension Ghostty {
                 let titleOverride = title.isEmpty ? nil : title
                 guard let surface = target.target.surface else { return false }
                 guard let surfaceView = self.surfaceView(from: surface) else { return false }
-                guard let window = surfaceView.window,
-                      let controller = window.windowController as? BaseTerminalController
-                else { return false }
+                guard let controller = BaseTerminalController.controller(owning: surfaceView) else { return false }
                 controller.titleOverride = titleOverride
                 return true
 
@@ -1937,9 +1954,7 @@ extension Ghostty {
                 case GHOSTTY_TARGET_SURFACE:
                     guard let surface = target.target.surface else { return false }
                     guard let surfaceView = self.surfaceView(from: surface) else { return false }
-                    guard let window = surfaceView.window,
-                          let controller = window.windowController as? BaseTerminalController
-                    else { return false }
+                    guard let controller = BaseTerminalController.controller(owning: surfaceView) else { return false }
                     controller.promptTabTitle()
                     return true
 
@@ -2094,7 +2109,7 @@ extension Ghostty {
             case GHOSTTY_TARGET_SURFACE:
                 guard let surface = target.target.surface else { return false }
                 guard let surfaceView = self.surfaceView(from: surface) else { return false }
-                guard let controller = surfaceView.window?.windowController as? TerminalController else { return false }
+                guard let controller = BaseTerminalController.controller(owning: surfaceView)?.terminalWindowController else { return false }
                 return controller.resizeWindow(
                     surfaceView,
                     to: NSSize(width: Double(v.width), height: Double(v.height))

@@ -93,7 +93,9 @@ class TerminalViewContainer: NSView {
 
 extension BaseTerminalController {
     var terminalViewContainer: TerminalViewContainer? {
-        window?.contentView as? TerminalViewContainer
+        if let controller = self as? TerminalController, let tabs = controller.verticalTabs { return tabs.selectedSession?.content }
+        if let session = self as? TerminalTabSessionController { return session.session?.content }
+        return window?.contentView as? TerminalViewContainer
     }
 }
 

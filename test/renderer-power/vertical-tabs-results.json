@@ -1,0 +1,277 @@
+{
+  "date": "2026-10-27",
+  "worktree_commit": "0a7d971d57694df6566ab942d2768844df686b2e",
+  "description": "Pre-feature library and final library, eight-sample CRT glow at 5120x2880. Offscreen renderer throughput excludes presentation and input latency.",
+  "before_library_sha256": "8aba552be5e0c0752b011a1bb2a920b06c3f94a4c9c01a5330b0aa0578cd71bf",
+  "after_library_sha256": "204c836a780fd79ee819d542e3f8fbc3be346844ad770c0830db52f1bbd94376",
+  "configuration": "# Existing preferences.\ncopy-on-select = clipboard\nmacos-titlebar-style = tabs\n\n# Dark CRT edge color also sets the macOS tab titlebar color.\n# The shader gently lifts the screen center above this base.\n# Homebrew with lightness-first AA contrast adjustments for ANSI text slots 1-15.\n# Source colors clear 4.5:1 against the brightest current CRT screen background.\n# ANSI 0 stays dark for backgrounds/inverse text and is the documented exception.\n# CRT post-processing and app-defined colors can reduce contrast below AA.\n# Original palette: https://terminalthemes.com/themes/homebrew\nbackground = #070e0a\nforeground = #00ff00\nselection-background = #083905\nselection-foreground = #ffffff\ncursor-color = #23ff18\ncursor-text = #000000\npalette = 0=#070e0a\npalette = 1=#dd5343\npalette = 2=#00a600\npalette = 3=#999900\npalette = 4=#4079ff\npalette = 5=#d43cd3\npalette = 6=#00a6b2\npalette = 7=#bfbfbf\npalette = 8=#818181\npalette = 9=#ff5948\npalette = 10=#00d900\npalette = 11=#e5e500\npalette = 12=#5f91ff\npalette = 13=#f72df6\npalette = 14=#00e5e5\npalette = 15=#e5e5e5\n\nfont-family = Cascadia Code\nfont-size = 14\nfont-feature = calt, liga\ncursor-style = block\ncursor-style-blink = false\n# Preserve the block cursor at shell prompts.\nshell-integration-features = no-cursor\n\nbackground-opacity = 1\nwindow-padding-x = 14\nwindow-padding-y = 14\n\n# Static CRT effects. Comment out custom-shader to disable them.\ncustom-shader = /Volumes/T7/Projects/ghostty/test/renderer-power/high.glsl\ncustom-shader-animation = false\n\n# Offscreen throughput is intentionally uncapped.\nwindow-vsync = false\n",
+  "shader_path": "test/renderer-power/high.glsl",
+  "shader_sha256": "7fca6c891eb573f3dccfc39886fbc6f6159791de4654410023c1e543eb27eb53",
+  "before": [
+    {
+      "gpu": "AMD Radeon Pro 5500M",
+      "seconds": 1.8183995819999836,
+      "gpu_p95_ms": 4.7822399938013405,
+      "width": 5120,
+      "frame_median_ms": 6.102832005126402,
+      "frame_p95_ms": 6.39046001015231,
+      "renderer_fps": 164.98024030012272,
+      "gpu_buffers": 301,
+      "height": 2880,
+      "frames": 300,
+      "gpu_median_ms": 4.545959993265569,
+      "gpu_errors": 0,
+      "executable_sha256": "2419f32e145cbf80caf57e46066e4ffe7380177d7178fc3188a212b4f2ff8b3d"
+    },
+    {
+      "gpu": "AMD Radeon Pro 5500M",
+      "seconds": 1.8115929799969308,
+      "gpu_p95_ms": 4.6302400005515665,
+      "width": 5120,
+      "frame_median_ms": 6.098287005443126,
+      "frame_p95_ms": 6.243815994821489,
+      "renderer_fps": 165.60011178698002,
+      "gpu_buffers": 300,
+      "height": 2880,
+      "frames": 300,
+      "gpu_median_ms": 4.515239997999743,
+      "gpu_errors": 0,
+      "executable_sha256": "2419f32e145cbf80caf57e46066e4ffe7380177d7178fc3188a212b4f2ff8b3d"
+    },
+    {
+      "gpu": "AMD Radeon Pro 5500M",
+      "seconds": 1.7373701809847262,
+      "gpu_p95_ms": 4.799119982635602,
+      "width": 5120,
+      "frame_median_ms": 5.786019988590851,
+      "frame_p95_ms": 6.183285993756726,
+      "renderer_fps": 172.67477206841585,
+      "gpu_buffers": 300,
+      "height": 2880,
+      "frames": 300,
+      "gpu_median_ms": 4.569999990053475,
+      "gpu_errors": 0,
+      "executable_sha256": "2419f32e145cbf80caf57e46066e4ffe7380177d7178fc3188a212b4f2ff8b3d"
+    }
+  ],
+  "after": [
+    {
+      "gpu": "AMD Radeon Pro 5500M",
+      "seconds": 1.8182541620044503,
+      "gpu_p95_ms": 4.768400016473606,
+      "width": 5120,
+      "frame_median_ms": 6.11074100015685,
+      "frame_p95_ms": 6.260312016820535,
+      "renderer_fps": 164.99343505930923,
+      "gpu_buffers": 302,
+      "height": 2880,
+      "frames": 300,
+      "gpu_median_ms": 4.543640010524541,
+      "gpu_errors": 0,
+      "executable_sha256": "1f887bc8f852f022e27402813eda5c7472d4d8eff6e98f7f1c2b2d155817e56c"
+    },
+    {
+      "gpu": "AMD Radeon Pro 5500M",
+      "seconds": 1.8201859880064148,
+      "gpu_p95_ms": 4.640600003767759,
+      "width": 5120,
+      "frame_median_ms": 6.096183991758153,
+      "frame_p95_ms": 6.2603739788755774,
+      "renderer_fps": 164.818321851043,
+      "gpu_buffers": 302,
+      "height": 2880,
+      "frames": 300,
+      "gpu_median_ms": 4.53820000984706,
+      "gpu_errors": 0,
+      "executable_sha256": "1f887bc8f852f022e27402813eda5c7472d4d8eff6e98f7f1c2b2d155817e56c"
+    },
+    {
+      "gpu": "AMD Radeon Pro 5500M",
+      "seconds": 1.8237881370005198,
+      "gpu_p95_ms": 4.674720024922863,
+      "width": 5120,
+      "frame_median_ms": 6.13456399878487,
+      "frame_p95_ms": 6.29081399529241,
+      "renderer_fps": 164.49279053508533,
+      "gpu_buffers": 300,
+      "height": 2880,
+      "frames": 300,
+      "gpu_median_ms": 4.542320006294176,
+      "gpu_errors": 0,
+      "executable_sha256": "1f887bc8f852f022e27402813eda5c7472d4d8eff6e98f7f1c2b2d155817e56c"
+    }
+  ],
+  "power_switch": [
+    {
+      "selected_correctly": true,
+      "occluded_gpu": "Intel(R) UHD Graphics 630",
+      "pixels_preserved": true,
+      "visible_gpu": "Intel(R) UHD Graphics 630",
+      "on_battery": 1,
+      "both_migrated_before_draw": true
+    },
+    {
+      "selected_correctly": true,
+      "occluded_gpu": "AMD Radeon Pro 5500M",
+      "pixels_preserved": true,
+      "visible_gpu": "AMD Radeon Pro 5500M",
+      "on_battery": 0,
+      "both_migrated_before_draw": true
+    }
+  ],
+  "before_summary": {
+    "median_renderer_fps": 165.60011178698002,
+    "median_frame_ms": 6.098287005443126,
+    "worst_p95_ms": 6.39046001015231
+  },
+  "after_summary": {
+    "median_renderer_fps": 164.818321851043,
+    "median_frame_ms": 6.11074100015685,
+    "worst_p95_ms": 6.29081399529241
+  },
+  "release_app": {
+    "path": "/Volumes/T7/Projects/ghostty/macos/build/ReleaseLocal/Ghostty.app",
+    "executable_sha256": "690994b36c2c63fc3574921d0ed2a65f2deacdec2aa61e558e873825b66d34c9",
+    "version": "Ghostty 1.3.2-mmccall-vertical-tabs+0a7d971d5"
+  },
+  "validation": {
+    "zig_tests": "78/78 passed",
+    "macos_suite": "passed through macos/build.nu; separate UI-test target excluded by script",
+    "swiftlint": "strict checks passed",
+    "release_signature": "deep strict verification passed",
+    "visible_qa": "User confirmed sidebar/nesting, responsive native-fullscreen typing at 5K, and seamless CRT header. Computer Use remains blocked. Follow-up toolbar/scrollbar appearance awaits manual confirmation.",
+    "sidebar_chrome_followup": {
+      "changes": [
+        "auto-hiding overlay scrollbars",
+        "leading sidebar toggle beside window controls",
+        "removed toolbar New Tab button"
+      ],
+      "native_tests": "passed",
+      "release_build": "passed",
+      "visual_confirmation": "pending fresh app instance"
+    },
+    "sidebar_icon_only_followup": {
+      "change": "Hide toolbar labels; preserve sidebar tooltip and accessibility name",
+      "release_build": "passed",
+      "swiftlint": "strict passed"
+    },
+    "close_button_alignment_followup": {
+      "change": "Close control pinned to the outline cell trailing edge with a fixed width; title fills and truncates before it",
+      "native_tests": "passed",
+      "release_build": "passed",
+      "swiftlint": "strict passed"
+    },
+    "middle_click_followup": {
+      "change": "Middle-click closes the clicked sidebar tab through the existing close and undo paths; release must match the pressed row",
+      "native_tests": "passed",
+      "release_build": "passed",
+      "swiftlint": "strict passed"
+    },
+    "close_button_hover_followup": {
+      "change": "Circled-X control visible only on the active tab or hovered row; layout space remains reserved",
+      "native_tests": "passed",
+      "release_build": "passed",
+      "swiftlint": "strict passed"
+    }
+  },
+  "manual_qa": {
+    "executable_sha256": "25f65827d78234ed821f475cdaf4309c1f84afd5bfa2fce72e8c09dcbf44a848",
+    "confirmed_by": "user",
+    "sidebar_and_nested_tabs": "passed",
+    "native_fullscreen_5k_typing": "responsive",
+    "crt_terminal_header_seam": "seamless",
+    "coverage_note": "Confirmed before the follow-up toolbar and scrollbar adjustments."
+  },
+  "live_gpu_verification": {
+    "pids": [
+      70586
+    ],
+    "connections": [
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelDevice [AMDRadeonX6000_AMDAccelDevice]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelSharedUserClient [AMDRadeonX6000_AMDAccelSharedUserClient]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelCommandQueue [AMDRadeonX6000_AMDAccelCommandQueue]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelCommandQueue [AMDRadeonX6000_AMDAccelCommandQueue]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelCommandQueue [AMDRadeonX6000_AMDAccelCommandQueue]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelDevice [AMDRadeonX6000_AMDAccelDevice]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelSharedUserClient [AMDRadeonX6000_AMDAccelSharedUserClient]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelCommandQueue [AMDRadeonX6000_AMDAccelCommandQueue]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelCommandQueue [AMDRadeonX6000_AMDAccelCommandQueue]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "AMDRadeonX6000_AMDNavi14GraphicsAccelerator [AMDRadeonX6000_AMDNavi14GraphicsAccelerator]",
+          "AMDRadeonX6000_AMDAccelCommandQueue [AMDRadeonX6000_AMDAccelCommandQueue]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "IntelAccelerator [IntelAccelerator]",
+          "IGAccelDevice [IGAccelDevice]"
+        ],
+        "creator": "pid 70586, ghostty"
+      },
+      {
+        "path": [
+          "IntelAccelerator [IntelAccelerator]",
+          "IGAccelSharedUserClient [IGAccelSharedUserClient]"
+        ],
+        "creator": "pid 70586, ghostty"
+      }
+    ],
+    "executable_sha256": "25f65827d78234ed821f475cdaf4309c1f84afd5bfa2fce72e8c09dcbf44a848"
+  }
+}

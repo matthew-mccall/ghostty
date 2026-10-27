@@ -18,6 +18,10 @@
       {
         "key" : "GHOSTTY_CONFIG_PATH",
         "value" : "\/tmp\/Ghostty\/testing_config.ghostty"
+      },
+      {
+        "key" : "DYLD_FRAMEWORK_PATH",
+        "value" : "$(BUILT_PRODUCTS_DIR)/Ghostty.app/Contents/Frameworks"
       }
     ],
     "performanceAntipatternCheckerEnabled" : true,

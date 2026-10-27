@@ -5453,6 +5453,12 @@ pub fn performBindingAction(self: *Surface, action: input.Binding.Action) !bool 
             {},
         ),
 
+        inline .new_child_tab, .indent_tab, .outdent_tab, .close_tab_subtree, .toggle_tab_sidebar => |_, tag| return try self.rt_app.performAction(
+            .{ .surface = self },
+            @field(apprt.Action.Key, @tagName(tag)),
+            {},
+        ),
+
         .close_tab => |v| return try self.rt_app.performAction(
             .{ .surface = self },
             .close_tab,

@@ -98,9 +98,13 @@ class TerminalWindow: NSWindow {
         // This is required so that window restoration properly creates our tabs
         // again. I'm not sure why this is required. If you don't do this, then
         // tabs restore as separate windows.
-        tabbingMode = .preferred
-        DispatchQueue.main.async {
-            self.tabbingMode = .automatic
+        if terminalController?.verticalTabsEnabled == true {
+            tabbingMode = .disallowed
+        } else {
+            tabbingMode = .preferred
+            DispatchQueue.main.async {
+                if self.terminalController?.verticalTabsEnabled != true { self.tabbingMode = .automatic }
+            }
         }
 
         // All new windows are based on the app config at the time of creation.
@@ -119,7 +123,7 @@ class TerminalWindow: NSWindow {
         }
 
         // If window decorations are disabled, remove our title
-        if !config.windowDecorations { styleMask.remove(.titled) }
+        if !config.windowDecorations && terminalController?.verticalTabsEnabled != true { styleMask.remove(.titled) }
 
         // NOTE: setInitialWindowPosition is NOT called here because subclass
         // awakeFromNib may add decorations (e.g. toolbar for tabs style) that
@@ -242,7 +246,39 @@ class TerminalWindow: NSWindow {
         targetController.promptTabTitle()
     }
 
+    override func moveTabToNewWindow(_ sender: Any?) {
+        if let tabs = terminalController?.verticalTabs, let id = tabs.tree.selectedID {
+            tabs.detach(id)
+        } else { super.moveTabToNewWindow(sender) }
+    }
+
+    override func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
+        if terminalController?.verticalTabs != nil,
+           item.action == #selector(toggleTabOverview(_:)) || item.action == #selector(toggleTabBar(_:)) { return false }
+        return super.validateUserInterfaceItem(item)
+    }
+
+    override func toggleTabBar(_ sender: Any?) {
+        guard terminalController?.verticalTabs == nil else { return }
+        super.toggleTabBar(sender)
+    }
+
+    override func toggleTabOverview(_ sender: Any?) {
+        guard terminalController?.verticalTabs == nil else { return }
+        super.toggleTabOverview(sender)
+    }
+
     override func mergeAllWindows(_ sender: Any?) {
+        if let tabs = terminalController?.verticalTabs {
+            for source in TerminalController.all where source !== terminalController {
+                if let other = source.verticalTabs {
+                    for node in other.tree.roots {
+                        _ = tabs.transfer(from: other, id: node.id, to: .init(parent: nil, index: tabs.tree.roots.count))
+                    }
+                } else { _ = tabs.importTab(source) }
+            }
+            return
+        }
         super.mergeAllWindows(sender)
 
         // It takes an event loop cycle to merge all the windows so we set a
@@ -896,5 +932,22 @@ extension TerminalWindow: TabTitleEditorDelegate {
               let focusedSurface = controller.focusedSurface
         else { return }
         makeFirstResponder(focusedSurface)
+    }
+}
+
+// A public window-level drop target lets vertical subtrees enter horizontal
+// windows without reaching into AppKit's private native tab-bar views.
+extension TerminalWindow: NSDraggingDestination {
+    func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        guard terminalController?.verticalTabs == nil,
+              VerticalTabContainerController.dragSource(sender) != nil else { return [] }
+        return .move
+    }
+
+    func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        guard let destination = terminalController, destination.verticalTabs == nil,
+              let (source, id) = VerticalTabContainerController.dragSource(sender) else { return false }
+        source.flatten(id, into: destination)
+        return true
     }
 }

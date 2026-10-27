@@ -736,6 +736,7 @@ pub const Application = extern struct {
             .new_split => return Action.newSplit(target, value),
 
             .new_tab => return Action.newTab(target, .none),
+            .new_child_tab, .indent_tab, .outdent_tab, .close_tab_subtree, .toggle_tab_sidebar => return false,
 
             .new_window => try Action.newWindow(
                 self,

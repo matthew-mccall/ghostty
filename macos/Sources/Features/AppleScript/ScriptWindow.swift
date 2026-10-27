@@ -144,6 +144,7 @@ final class ScriptWindow: NSObject {
     private var controllers: [BaseTerminalController] {
         guard NSApp.isAppleScriptEnabled else { return [] }
         guard let primaryController else { return [] }
+        if let owner = primaryController.terminalWindowController, owner.verticalTabs != nil { return owner.tabContainer.controllers }
         guard let window = primaryController.window else { return [primaryController] }
 
         if let tabGroup = window.tabGroup {
@@ -164,6 +165,7 @@ final class ScriptWindow: NSObject {
     /// non-tabbed windows we fall back to the primary controller.
     private var selectedController: BaseTerminalController? {
         guard let primaryController else { return nil }
+        if let owner = primaryController.terminalWindowController, owner.verticalTabs != nil { return owner.tabContainer.selectedController }
         guard let window = primaryController.window else { return primaryController }
 
         if let tabGroup = window.tabGroup,
@@ -241,7 +243,7 @@ extension ScriptWindow {
             return "controller-\(ObjectIdentifier(primaryController).hexString)"
         }
 
-        if let tabGroup = window.tabGroup {
+        if primaryController.terminalWindowController?.verticalTabs == nil, let tabGroup = window.tabGroup {
             return stableID(tabGroup: tabGroup)
         }
 

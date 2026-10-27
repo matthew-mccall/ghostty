@@ -56,7 +56,11 @@ class ExpiringUndoManager: UndoManager {
     /// the undo manager is reset.
     override func removeAllActions() {
         super.removeAllActions()
+        // Keep the old targets alive until the set's mutation has finished.
+        // Their cleanup calls back into removeAllActions(withTarget:).
+        let targets = expiringTargets
         expiringTargets = []
+        targets.forEach { $0.expire() }
     }
 
     /// Removes all undo and redo operations involving the specified target.
@@ -127,7 +131,9 @@ private class ExpiringTarget {
     /// to expire the target before the timer duration has elapsed.
     func expire() {
         target = nil
-        undoManager?.removeAllActions(withTarget: self)
+        let manager = undoManager
+        undoManager = nil
+        manager?.removeAllActions(withTarget: self)
         timer?.invalidate()
         timer = nil
     }

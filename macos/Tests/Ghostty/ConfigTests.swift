@@ -6,6 +6,12 @@ import SwiftUI
 struct ConfigTests {
     // MARK: - Boolean Properties
 
+    @Test func verticalTabsAreOptIn() throws {
+        #expect(try TemporaryConfig("").macosVerticalTabs == false)
+        #expect(try TemporaryConfig("macos-vertical-tabs = true").macosVerticalTabs == true)
+        #expect(try TemporaryConfig("macos-vertical-tabs = false").macosVerticalTabs == false)
+    }
+
     @Test func initialWindowDefaultsToTrue() throws {
         let config = try TemporaryConfig("")
         #expect(config.initialWindow == true)

@@ -37,12 +37,17 @@ class BaseTerminalController: NSWindowController,
     private static let surfaceControllers =
         NSMapTable<Ghostty.SurfaceView, BaseTerminalController>.weakToWeakObjects()
 
+    /// Physical window hosts mirror their selected session but do not own its surfaces.
+    var ownsSurfaceTree: Bool { true }
+    var surfaceTreeIsVisible: Bool { window?.occlusionState.contains(.visible) ?? false }
+    func sessionStateDidChange() {}
+
     /// The app instance that this terminal view will represent.
     let ghostty: Ghostty.App
 
     /// The currently focused surface.
     var focusedSurface: Ghostty.SurfaceView? {
-        didSet { syncFocusToSurfaceTree() }
+        didSet { syncFocusToSurfaceTree(); sessionStateDidChange() }
     }
 
     /// The tree of splits within this terminal window.
@@ -50,6 +55,7 @@ class BaseTerminalController: NSWindowController,
         didSet {
             Self.updateSurfaceControllers(self, from: oldValue, to: surfaceTree)
             surfaceTreeDidChange(from: oldValue, to: surfaceTree)
+            sessionStateDidChange()
         }
     }
 
@@ -252,20 +258,22 @@ class BaseTerminalController: NSWindowController,
         }
 
         if let controller = surface.window?.windowController as? BaseTerminalController,
-           controller.surfaceTree.contains(surface) {
+           controller.ownsSurfaceTree, controller.surfaceTree.contains(surface) {
             return controller
         }
 
         return NSApp.windows
             .compactMap { $0.windowController as? BaseTerminalController }
+            .flatMap { ($0 as? TerminalController)?.verticalTabs?.controllers ?? [$0] }
             .first { $0.surfaceTree.contains(surface) }
     }
 
-    private static func updateSurfaceControllers(
+    static func updateSurfaceControllers(
         _ controller: BaseTerminalController,
         from oldTree: SplitTree<Ghostty.SurfaceView>,
         to newTree: SplitTree<Ghostty.SurfaceView>
     ) {
+        guard controller.ownsSurfaceTree else { return }
         for surface in oldTree where !newTree.contains(surface) {
             if surfaceControllers.object(forKey: surface) === controller {
                 surfaceControllers.removeObject(forKey: surface)
@@ -352,7 +360,7 @@ class BaseTerminalController: NSWindowController,
         for surfaceView in surfaceTree {
             // Our focus state requires that this window is key and our currently
             // focused surface is the surface in this view.
-            let focused: Bool = (window?.isKeyWindow ?? false) &&
+            let focused: Bool = surfaceTreeIsVisible && (window?.isKeyWindow ?? false) &&
                 surfaceView == focusedSurface &&
                 surfaceView.isFirstResponder
             surfaceView.focusDidChange(focused)
@@ -643,12 +651,14 @@ class BaseTerminalController: NSWindowController,
     }
 
     @objc private func ghosttyCommandPaletteDidToggle(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         guard let surfaceView = notification.object as? Ghostty.SurfaceView else { return }
         guard surfaceTree.contains(surfaceView) else { return }
         toggleCommandPalette(nil)
     }
 
     @objc private func ghosttyMaximizeDidToggle(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         guard let window else { return }
         guard let surfaceView = notification.object as? Ghostty.SurfaceView else { return }
         guard surfaceTree.contains(surfaceView) else { return }
@@ -656,6 +666,7 @@ class BaseTerminalController: NSWindowController,
     }
 
     @objc private func ghosttyDidCloseSurface(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
         guard let node = surfaceTree.root?.node(view: target) else { return }
         closeSurface(
@@ -664,6 +675,7 @@ class BaseTerminalController: NSWindowController,
     }
 
     @objc private func ghosttyDidNewSplit(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         // The target must be within our tree
         guard let oldView = notification.object as? Ghostty.SurfaceView else { return }
         guard surfaceTree.root?.node(view: oldView) != nil else { return }
@@ -688,6 +700,7 @@ class BaseTerminalController: NSWindowController,
     }
 
     @objc private func ghosttyDidEqualizeSplits(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
 
         // Check if target surface is in current controller's tree
@@ -698,6 +711,7 @@ class BaseTerminalController: NSWindowController,
     }
 
     @objc private func ghosttyDidFocusSplit(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         // The target must be within our tree
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
         guard surfaceTree.root?.node(view: target) != nil else { return }
@@ -731,6 +745,7 @@ class BaseTerminalController: NSWindowController,
     }
 
     @objc private func ghosttyDidToggleSplitZoom(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         // The target must be within our tree
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
         guard let targetNode = surfaceTree.root?.node(view: target) else { return }
@@ -759,6 +774,7 @@ class BaseTerminalController: NSWindowController,
     }
 
     @objc private func ghosttyDidResizeSplit(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         // The target must be within our tree
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
         guard let targetNode = surfaceTree.root?.node(view: target) else { return }
@@ -791,9 +807,12 @@ class BaseTerminalController: NSWindowController,
     }
 
     @objc private func ghosttyDidPresentTerminal(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
         guard surfaceTree.contains(target) else { return }
 
+        // Reveal the owning logical tab before presenting its terminal.
+        if let session = self as? TerminalTabSessionController { session.host?.verticalTabs?.select(session) }
         // Bring the window to front and focus the surface.
         window?.makeKeyAndOrderFront(nil)
 
@@ -807,6 +826,7 @@ class BaseTerminalController: NSWindowController,
     }
 
     @objc private func ghosttySurfaceDragEndedNoTarget(_ notification: Notification) {
+        guard ownsSurfaceTree else { return }
         guard let target = notification.object as? Ghostty.SurfaceView else { return }
         guard let targetNode = surfaceTree.root?.node(view: target) else { return }
 
@@ -856,6 +876,7 @@ class BaseTerminalController: NSWindowController,
     }
 
     private func localEventFlagsChanged(_ event: NSEvent) -> NSEvent? {
+        guard ownsSurfaceTree else { return event }
         var surfaces: [Ghostty.SurfaceView] = surfaceTree.map { $0 }
 
         // If we're the main window receiving key input, then we want to avoid
@@ -913,7 +934,7 @@ class BaseTerminalController: NSWindowController,
         applyTitleToWindow()
     }
 
-    private func applyTitleToWindow() {
+    func applyTitleToWindow() {
         guard let window else { return }
 
         if let titleOverride {
@@ -1000,8 +1021,8 @@ class BaseTerminalController: NSWindowController,
         // Source is not in our tree - search other windows
         var sourceController: BaseTerminalController?
         var sourceNode: SplitTree<Ghostty.SurfaceView>.Node?
-        for window in NSApp.windows {
-            guard let controller = window.windowController as? BaseTerminalController else { continue }
+        for controller in NSApp.windows.compactMap({ $0.windowController as? BaseTerminalController })
+            .flatMap({ ($0 as? TerminalController)?.verticalTabs?.controllers ?? [$0] }) {
             guard controller !== self else { continue }
             if let node = controller.surfaceTree.root?.node(view: source) {
                 sourceController = controller
@@ -1088,7 +1109,8 @@ class BaseTerminalController: NSWindowController,
     // MARK: Fullscreen
 
     /// Toggle fullscreen for the given mode.
-    func toggleFullscreen(mode: FullscreenMode) {
+    func toggleFullscreen(mode requestedMode: FullscreenMode) {
+        let mode: FullscreenMode = (self as? TerminalController)?.verticalTabsEnabled == true ? .native : requestedMode
         // We need a window to fullscreen
         guard let window = self.window else { return }
 
@@ -1282,8 +1304,8 @@ class BaseTerminalController: NSWindowController,
         syncSurfaceTreeOcclusionState()
     }
 
-    private func syncSurfaceTreeOcclusionState() {
-        let visible = self.window?.occlusionState.contains(.visible) ?? false
+    func syncSurfaceTreeOcclusionState() {
+        let visible = surfaceTreeIsVisible
         for view in surfaceTree {
             if let surface = view.surface, view.isWindowVisible != visible {
                 ghostty_surface_set_occlusion(surface, visible)

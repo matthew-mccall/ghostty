@@ -422,6 +422,36 @@ fn actionCommands(action: Action.Key) []const Command {
             .description = i18n.N_("Open a new window."),
         }},
 
+        .new_child_tab => comptime &.{.{
+            .action = .new_child_tab,
+            .title = i18n.N_("New Child Tab"),
+            .description = i18n.N_("Create a child of the current vertical tab."),
+        }},
+
+        .indent_tab => comptime &.{.{
+            .action = .indent_tab,
+            .title = i18n.N_("Indent Tab"),
+            .description = i18n.N_("Nest this tab and its descendants under the previous sibling."),
+        }},
+
+        .outdent_tab => comptime &.{.{
+            .action = .outdent_tab,
+            .title = i18n.N_("Outdent Tab"),
+            .description = i18n.N_("Move this tab and its descendants one level toward the root."),
+        }},
+
+        .close_tab_subtree => comptime &.{.{
+            .action = .close_tab_subtree,
+            .title = i18n.N_("Close Tab Subtree"),
+            .description = i18n.N_("Close this tab and all its descendants."),
+        }},
+
+        .toggle_tab_sidebar => comptime &.{.{
+            .action = .toggle_tab_sidebar,
+            .title = i18n.N_("Toggle Tab Sidebar"),
+            .description = i18n.N_("Show or hide the native vertical tab sidebar."),
+        }},
+
         .new_tab => comptime &.{.{
             .action = .new_tab,
             .title = i18n.N_("New Tab"),

@@ -58,7 +58,7 @@ extension TerminalRestorable {
 
 /// The state stored for terminal window restoration.
 final class TerminalRestorableState: TerminalRestorable {
-    static var version: Int { 7 }
+    static var version: Int { 8 }
     static var minimumVersion: Int { 5 }
 
     var focusedSurface: String? {
@@ -75,6 +75,10 @@ final class TerminalRestorableState: TerminalRestorable {
     }
     var titleOverride: String? {
         internalState.titleOverride
+    }
+
+    var verticalTabs: TerminalTabRestorableLayout<Ghostty.SurfaceView>? {
+        internalState.verticalTabs
     }
 
     /// Internal State we use to perform unit tests
@@ -151,6 +155,11 @@ class TerminalWindowRestoration: NSObject, NSWindowRestoration {
             return
         }
 
+        if let layout = state.verticalTabs, !layout.preorder.isEmpty {
+            restoreTabs(layout, state: state, app: appDelegate.ghostty, completionHandler: completionHandler)
+            return
+        }
+
         // The window creation has to go through our terminalManager so that it
         // can be found for events from libghostty. This uses the low-level
         // createWindow so that AppKit can place the window wherever it should
@@ -194,6 +203,42 @@ class TerminalWindowRestoration: NSObject, NSWindowRestoration {
         // Give the window to AppKit first, then adjust its frame and style
         // to minimise any visible frame changes.
         c.toggleFullscreen(mode: mode)
+    }
+
+    private static func restoreTabs(
+        _ layout: TerminalTabRestorableLayout<Ghostty.SurfaceView>,
+        state: TerminalRestorableState,
+        app: Ghostty.App,
+        completionHandler: @escaping (NSWindow?, Error?) -> Void
+    ) {
+        let records = layout.preorder.filter { !$0.surfaceTree.isEmpty }
+        guard let first = records.first else { completionHandler(nil, nil); return }
+        let primary = TerminalController(app, withSurfaceTree: first.surfaceTree)
+        guard let window = primary.window else { completionHandler(nil, TerminalRestoreError.windowDidNotLoad); return }
+        if let tabs = primary.verticalTabs {
+            tabs.restoreLayout(layout)
+            completionHandler(window, nil)
+            if let surface = tabs.selectedController?.focusedSurface { restoreFocus(to: surface, inWindow: window) }
+            return
+        }
+        // The current option and OS, not the archive, choose the presentation.
+        // Preserve every eligible session when flattening a saved hierarchy.
+        var last = window
+        var selectedWindow = window
+        for (index, record) in records.enumerated() {
+            let controller = index == 0 ? primary : TerminalController(app, withSurfaceTree: record.surfaceTree, verticalTabs: false)
+            guard let candidate = controller.window else { continue }
+            controller.titleOverride = record.titleOverride
+            (candidate as? TerminalWindow)?.tabColor = record.tabColor ?? .none
+            if let focused = record.focusedSurface,
+               let surface = record.surfaceTree.first(where: { $0.id.uuidString == focused }) {
+                controller.focusedSurfaceDidChange(to: surface)
+            }
+            if index > 0 { last.addTabbedWindowSafely(candidate, ordered: .above); last = candidate }
+            if record.id == layout.selected { selectedWindow = candidate }
+        }
+        completionHandler(window, nil)
+        window.tabGroup?.selectedWindow = selectedWindow
     }
 
     /// This restores the focus state of the surfaceview within the given window. When restoring,

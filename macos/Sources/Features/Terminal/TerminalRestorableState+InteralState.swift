@@ -15,17 +15,25 @@ extension TerminalRestorableState {
         let effectiveFullscreenMode: FullscreenMode?
         let tabColor: TerminalTabColor?
         let titleOverride: String?
+
+        // MARK: - Version 8
+        var verticalTabs: TerminalTabRestorableLayout<ViewType>?
     }
 }
 
 extension TerminalRestorableState.InternalState where ViewType == Ghostty.SurfaceView {
     init(from controller: TerminalController) {
+        let layout = controller.verticalTabs?.restorableLayout()
         self.init(
-            focusedSurface: controller.focusedSurface?.id.uuidString,
-            surfaceTree: controller.surfaceTree,
+            focusedSurface: layout == nil ? controller.focusedSurface?.id.uuidString : nil,
+            // The hierarchy already encodes each eligible terminal exactly once.
+            // A mirrored legacy tree would decode a second, unused PTY and could
+            // also restore a custom-command tab excluded from the hierarchy.
+            surfaceTree: layout == nil ? controller.surfaceTree : .init(),
             effectiveFullscreenMode: controller.fullscreenStyle?.fullscreenMode,
             tabColor: (controller.window as? TerminalWindow)?.tabColor,
             titleOverride: controller.titleOverride,
+            verticalTabs: layout,
         )
     }
 }

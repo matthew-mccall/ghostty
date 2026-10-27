@@ -786,7 +786,7 @@ class AppDelegate: NSObject,
 
     @objc private func ghosttyNewTab(_ notification: Notification) {
         guard let surfaceView = notification.object as? Ghostty.SurfaceView else { return }
-        guard let window = surfaceView.window else { return }
+        guard let window = BaseTerminalController.controller(owning: surfaceView)?.window ?? surfaceView.window else { return }
 
         // We only want to listen to new tabs if the focused parent is
         // a regular terminal controller.
@@ -795,12 +795,16 @@ class AppDelegate: NSObject,
         let configAny = notification.userInfo?[Ghostty.Notification.NewSurfaceConfigKey]
         let config = configAny as? Ghostty.SurfaceConfiguration
 
-        _ = TerminalController.newTab(ghostty, from: window, withBaseConfig: config)
+        if let session = BaseTerminalController.controller(owning: surfaceView) as? TerminalTabSessionController,
+           let tabs = session.host?.verticalTabs {
+            _ = tabs.newTab(baseConfig: config, child: false, relativeTo: session.id)
+        } else { _ = TerminalController.newTab(ghostty, from: window, withBaseConfig: config) }
     }
 
     private func setDockBadge() {
         let bellCount = NSApp.windows
             .compactMap { $0.windowController as? BaseTerminalController }
+            .flatMap { ($0 as? TerminalController)?.verticalTabs?.controllers ?? [$0] }
             .reduce(0) { $0 + ($1.bell ? 1 : 0) }
         let wantsBadge = ghostty.config.bellFeatures.contains(.attention) && bellCount > 0
         let label = wantsBadge ? (bellCount > 99 ? "99+" : String(bellCount)) : nil
@@ -968,7 +972,7 @@ class AppDelegate: NSObject,
 
     func findSurface(forUUID uuid: UUID) -> Ghostty.SurfaceView? {
         for c in TerminalController.all {
-            for view in c.surfaceTree where view.id == uuid {
+            for view in c.allTerminalSurfaces where view.id == uuid {
                 return view
             }
         }

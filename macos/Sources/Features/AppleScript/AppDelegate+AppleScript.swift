@@ -324,12 +324,12 @@ extension NSApplication {
 
     /// All terminal controllers in undefined order.
     fileprivate var allTerminalControllers: [BaseTerminalController] {
-        NSApp.windows.compactMap { $0.windowController as? BaseTerminalController }
+        NSApp.windows.compactMap { $0.windowController as? BaseTerminalController }.flatMap { ($0 as? TerminalController)?.verticalTabs?.controllers ?? [$0] }
     }
 
     /// All terminal controllers in front-to-back order.
     fileprivate var orderedTerminalControllers: [BaseTerminalController] {
-        NSApp.orderedWindows.compactMap { $0.windowController as? BaseTerminalController }
+        NSApp.orderedWindows.compactMap { $0.windowController as? BaseTerminalController }.flatMap { ($0 as? TerminalController)?.verticalTabs?.controllers ?? [$0] }
     }
 
     /// Identifies the primary tab controller for a window's tab group.
@@ -342,6 +342,7 @@ extension NSApplication {
     /// tab group's ordered windows list.
     fileprivate func primaryTerminalController(for controller: BaseTerminalController) -> BaseTerminalController? {
         guard let window = controller.window else { return nil }
+        if let owner = controller.terminalWindowController, owner.verticalTabs != nil { return owner }
         guard let tabGroup = window.tabGroup else { return controller }
 
         return tabGroup.windows

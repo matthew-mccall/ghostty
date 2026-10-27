@@ -675,7 +675,7 @@ extension Ghostty {
         }
 
         private func localEventLeftMouseDown(_ event: NSEvent) -> NSEvent? {
-            let isCommandPaletteVisible = (event.window?.windowController as? BaseTerminalController)?
+            let isCommandPaletteVisible = BaseTerminalController.controller(owning: self)?
                 .commandPaletteIsShowing == true
             guard !isCommandPaletteVisible else {
                 // We don't want to process events that
@@ -1053,7 +1053,7 @@ extension Ghostty {
 
             // Handle focus-follows-mouse
             if let window,
-               let controller = window.windowController as? BaseTerminalController,
+               let controller = BaseTerminalController.controller(owning: self),
                !controller.commandPaletteIsShowing,
                window.isKeyWindow &&
                     !self.focused &&

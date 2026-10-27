@@ -3456,6 +3456,15 @@ keybind: Keybinds = .{},
 /// Changing this option at runtime only applies to new windows.
 @"macos-titlebar-style": MacTitlebarStyle = .transparent,
 
+/// Use a native sidebar with nested terminal tabs on macOS Tahoe (26) or newer.
+/// Disabled by default. Reloading this option affects newly created windows only.
+/// Vertical windows own their titlebar layout and always use native fullscreen,
+/// overriding `macos-titlebar-style` and `macos-non-native-fullscreen` for those windows.
+/// The titlebar above the terminal matches its effective background; the sidebar
+/// retains native system glass. Other platforms and older macOS use normal tabs.
+/// When restoring with this option disabled, saved trees become flat native tabs.
+@"macos-vertical-tabs": bool = false,
+
 /// Whether the proxy icon in the macOS titlebar is visible. The proxy icon
 /// is the icon that represents the folder of the current working directory.
 /// You can see this very clearly in the macOS built-in Terminal.app

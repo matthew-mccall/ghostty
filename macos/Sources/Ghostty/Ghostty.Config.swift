@@ -351,6 +351,14 @@ extension Ghostty {
             return MacOSWindowButtons(rawValue: str) ?? defaultValue
         }
 
+        var macosVerticalTabs: Bool {
+            guard let config = self.config else { return false }
+            var value = false
+            let key = "macos-vertical-tabs"
+            _ = ghostty_config_get(config, &value, key, UInt(key.utf8.count))
+            return value
+        }
+
         var macosTitlebarStyle: MacOSTitlebarStyle {
             let defaultValue = MacOSTitlebarStyle.transparent
             guard let config = self.config else { return defaultValue }

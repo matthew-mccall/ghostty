@@ -44,7 +44,7 @@ final class ScriptTab: NSObject {
     @objc(title)
     var title: String {
         guard NSApp.isAppleScriptEnabled else { return "" }
-        return controller?.window?.title ?? ""
+        return (controller as? TerminalTabSessionController)?.tabTitle ?? controller?.window?.title ?? ""
     }
 
     /// Exposed as the AppleScript `name override` property.
@@ -141,6 +141,7 @@ final class ScriptTab: NSObject {
             return nil
         }
 
+        if let controller { controller.terminalWindowController?.tabContainer.select(controller) }
         tabContainerWindow.makeKeyAndOrderFront(nil)
         return nil
     }
@@ -153,6 +154,11 @@ final class ScriptTab: NSObject {
         guard let tabController = parentController else {
             command.scriptErrorNumber = errAEEventFailed
             command.scriptErrorString = "Tab is no longer available."
+            return nil
+        }
+
+        if let session = tabController as? TerminalTabSessionController {
+            session.host?.verticalTabs?.close(session.id, subtree: false, confirm: false)
             return nil
         }
 
@@ -197,6 +203,6 @@ extension ScriptTab {
     /// Tab identity belongs to `ScriptTab`, so both tab creation and tab ID
     /// lookups in `ScriptWindow` call this helper.
     static func stableID(controller: BaseTerminalController) -> String {
-        "tab-\(ObjectIdentifier(controller).hexString)"
+        "tab-\(controller.logicalTabID)"
     }
 }
